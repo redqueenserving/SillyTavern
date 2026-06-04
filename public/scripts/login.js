@@ -190,6 +190,7 @@ async function rqSendCode() {
     const $btn = $('#rqSendCode');
     $btn.addClass('disabled').text('发送中…');
     try {
+        csrfToken = await getCsrfToken();
         const response = await fetch('/api/users/send-code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
@@ -228,6 +229,7 @@ async function rqSubmitEmailAuth() {
         return displayError('请输入邮箱和验证码 / Enter e-mail and code');
     }
     try {
+        csrfToken = await getCsrfToken();
         const response = await fetch('/api/users/auth-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
