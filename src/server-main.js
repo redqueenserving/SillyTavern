@@ -67,6 +67,7 @@ import { UPLOADS_DIRECTORY } from './constants.js';
 
 // Routers
 import { router as usersPublicRouter } from './endpoints/users-public.js';
+import { router as redqueenAuthRouter, oauthRouter as redqueenOauthRouter } from './endpoints/redqueen-auth.js';
 import { init as statsInit, onExit as statsOnExit } from './endpoints/stats.js';
 import { checkForNewContent } from './endpoints/content-manager.js';
 import { init as settingsInit } from './endpoints/settings.js';
@@ -243,6 +244,8 @@ app.use(express.static(path.join(serverDirectory, 'public'), {}));
 
 // Public API
 app.use('/api/users', usersPublicRouter);
+app.use('/api/users', redqueenAuthRouter);
+app.use('/auth', redqueenOauthRouter);
 
 // Everything below this line requires authentication
 app.use(requireLoginMiddleware);

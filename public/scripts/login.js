@@ -177,6 +177,123 @@ function displayError(message) {
     $('#errorMessage').text(message);
 }
 
+// ===== RedQueen e-mail + social authentication =====
+
+let rqMode = 'login'; // 'login' | 'register'
+
+/**
+ * Requests an e-mail verification code.
+ * @param {string} purpose 'register' | 'login'
+ */
+async function rqSendCode(purpose) {
+    const email = String($('#rqEmail').val()).trim();
+    if (!email) {
+        return displayError('请输入邮箱 / Enter your e-mail');
+    }
+    const $btn = $('#rqSendCode');
+    $btn.addClass('disabled').text('发送中…');
+    try {
+        const response = await fetch('/api/users/send-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ email, purpose }),
+        });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            $btn.removeClass('disabled').text('发送验证码');
+            return displayError(data.error || '发送失败 / Failed to send');
+        }
+        displayError('验证码已发送，请查收邮箱 / Code sent, check your inbox');
+        let left = 60;
+        $btn.text(`${left}s`);
+        const timer = setInterval(() => {
+            left -= 1;
+            if (left <= 0) {
+                clearInterval(timer);
+                $btn.removeClass('disabled').text('发送验证码');
+            } else {
+                $btn.text(`${left}s`);
+            }
+        }, 1000);
+    } catch (error) {
+        $btn.removeClass('disabled').text('发送验证码');
+        displayError(String(error));
+    }
+}
+
+/**
+ * Submits the e-mail auth form (login or register).
+ */
+async function rqSubmitEmailAuth() {
+    const email = String($('#rqEmail').val()).trim();
+    const code = String($('#rqCode').val()).trim();
+    if (!email || !code) {
+        return displayError('请输入邮箱和验证码 / Enter e-mail and code');
+    }
+    const endpoint = rqMode === 'register' ? '/api/users/register' : '/api/users/login-email';
+    const payload = rqMode === 'register'
+        ? { email, code, name: String($('#rqName').val()).trim(), password: String($('#rqPassword').val()) }
+        : { email, code };
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            return displayError(data.error || '操作失败 / Failed');
+        }
+        if (data.handle) {
+            redirectToHome();
+        }
+    } catch (error) {
+        displayError(String(error));
+    }
+}
+
+/**
+ * Toggles between login and register modes for the e-mail form.
+ */
+function rqToggleMode() {
+    rqMode = rqMode === 'login' ? 'register' : 'login';
+    const isRegister = rqMode === 'register';
+    $('#rqName').toggle(isRegister);
+    $('#rqPassword').toggle(isRegister);
+    $('#rqSubmit').text(isRegister ? '注册' : '登录');
+    $('#rqToggleMode').text(isRegister ? '已有账号？登录' : '没有账号？注册');
+    displayError('');
+}
+
+/**
+ * Loads which social login providers are enabled and shows their buttons.
+ */
+async function rqLoadProviders() {
+    try {
+        const response = await fetch('/auth/providers');
+        if (!response.ok) return;
+        const providers = await response.json();
+        if (providers.google) $('#rqGoogle').show();
+        if (providers.x) $('#rqX').show();
+        if (!providers.google && !providers.x) $('#rqSocialBlock').hide();
+    } catch {
+        $('#rqSocialBlock').hide();
+    }
+}
+
+/**
+ * Wires up the RedQueen auth controls.
+ */
+function rqInitAuthControls() {
+    $('#rqShowEmail').on('click', () => {
+        $('#rqEmailForm').toggle();
+    });
+    $('#rqSendCode').on('click', () => rqSendCode(rqMode));
+    $('#rqSubmit').on('click', () => rqSubmitEmailAuth());
+    $('#rqToggleMode').on('click', () => rqToggleMode());
+    rqLoadProviders();
+}
+
 /**
  * Redirects the user to the home page.
  * Preserves the query string.
@@ -279,6 +396,7 @@ function configureDiscreetLogin() {
     }
     document.getElementById('shadow_popup').style.opacity = '';
     $('#cancelRecovery').on('click', onCancelRecoveryClick);
+    rqInitAuthControls();
     $(document).on('keydown', (evt) => {
         if (evt.key === 'Enter' && document.activeElement.tagName === 'INPUT') {
             if ($('#passwordRecoveryBlock').is(':visible')) {
