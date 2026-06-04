@@ -262,12 +262,28 @@ async function forceSetBackground(backgroundInfo) {
 
 async function onChatChanged() {
     const lockedUrl = chat_metadata[BG_METADATA_KEY];
+    const characterUrl = getCharacterBackgroundUrl();
 
-    $('#bg1').css('background-image', lockedUrl || background_settings.url);
+    $('#bg1').css('background-image', lockedUrl || characterUrl || background_settings.url);
 
     renderChatBackgrounds();
     highlightLockedBackground();
     highlightSelectedBackground();
+}
+
+/**
+ * Returns a CSS url() pointing to the currently selected character's portrait so
+ * that the chat background follows the active character. Returns an empty string
+ * when no single character is selected (groups, assistant home, etc.), letting
+ * the caller fall back to the global background.
+ * @returns {string} CSS url() string or '' when not applicable.
+ */
+function getCharacterBackgroundUrl() {
+    const character = characters[this_chid];
+    if (!character || !character.avatar || character.avatar === 'none') {
+        return '';
+    }
+    return `url("/characters/${encodeURIComponent(character.avatar)}")`;
 }
 
 /**
