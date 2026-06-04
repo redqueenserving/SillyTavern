@@ -78,7 +78,7 @@
                         <div id="redqueenAuthBlock" class="wide100p flex-container flexFlowColumn alignItemsCenter" style="margin-top:12px; gap:8px;">
                             <div id="rqDivider" style="opacity:.6; font-size:.9em;">— 或 / or —</div>
                             <div id="rqEmailToggle">
-                                <a id="rqShowEmail" href="#" onclick="return false;">用邮箱注册 / 登录</a>
+                                <a id="rqShowEmail" href="#" onclick="return false;">用邮箱登录 / 注册</a>
                             </div>
                             <div id="rqEmailForm" style="display:none; gap:6px;" class="flex-container flexFlowColumn alignItemsCenter wide100p">
                                 <input id="rqEmail" class="text_pole wide100p" type="email" placeholder="邮箱 / E-mail" autocomplete="email">
@@ -86,14 +86,10 @@
                                     <input id="rqCode" class="text_pole flex1" type="text" placeholder="验证码 / Code" autocomplete="one-time-code">
                                     <div id="rqSendCode" class="menu_button">发送验证码</div>
                                 </div>
-                                <input id="rqName" class="text_pole wide100p" type="text" placeholder="昵称 / Display name" autocomplete="nickname" style="display:none;">
-                                <input id="rqPassword" class="text_pole wide100p" type="password" placeholder="设置密码（可选） / Password (optional)" autocomplete="new-password" style="display:none;">
                                 <div class="flex-container flexGap10">
-                                    <div id="rqSubmit" class="menu_button">登录</div>
+                                    <div id="rqSubmit" class="menu_button">登录 / 注册</div>
                                 </div>
-                                <div id="rqModeSwitch">
-                                    <a id="rqToggleMode" href="#" onclick="return false;">没有账号？注册</a>
-                                </div>
+                                <div id="rqHint" style="opacity:.6; font-size:.85em;">未注册的邮箱将自动创建账号 / New e-mails are registered automatically</div>
                             </div>
                             <div id="rqSocialBlock" class="flex-container flexFlowColumn alignItemsCenter wide100p" style="gap:6px;">
                                 <a id="rqGoogle" class="menu_button wide100p" href="/auth/google" style="display:none;">

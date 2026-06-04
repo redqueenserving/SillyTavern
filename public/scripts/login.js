@@ -179,13 +179,10 @@ function displayError(message) {
 
 // ===== RedQueen e-mail + social authentication =====
 
-let rqMode = 'login'; // 'login' | 'register'
-
 /**
  * Requests an e-mail verification code.
- * @param {string} purpose 'register' | 'login'
  */
-async function rqSendCode(purpose) {
+async function rqSendCode() {
     const email = String($('#rqEmail').val()).trim();
     if (!email) {
         return displayError('请输入邮箱 / Enter your e-mail');
@@ -196,7 +193,7 @@ async function rqSendCode(purpose) {
         const response = await fetch('/api/users/send-code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-            body: JSON.stringify({ email, purpose }),
+            body: JSON.stringify({ email }),
         });
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -222,7 +219,7 @@ async function rqSendCode(purpose) {
 }
 
 /**
- * Submits the e-mail auth form (login or register).
+ * Submits the e-mail auth form. The same flow logs in or registers automatically.
  */
 async function rqSubmitEmailAuth() {
     const email = String($('#rqEmail').val()).trim();
@@ -230,15 +227,11 @@ async function rqSubmitEmailAuth() {
     if (!email || !code) {
         return displayError('请输入邮箱和验证码 / Enter e-mail and code');
     }
-    const endpoint = rqMode === 'register' ? '/api/users/register' : '/api/users/login-email';
-    const payload = rqMode === 'register'
-        ? { email, code, name: String($('#rqName').val()).trim(), password: String($('#rqPassword').val()) }
-        : { email, code };
     try {
-        const response = await fetch(endpoint, {
+        const response = await fetch('/api/users/auth-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({ email, code }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -250,19 +243,6 @@ async function rqSubmitEmailAuth() {
     } catch (error) {
         displayError(String(error));
     }
-}
-
-/**
- * Toggles between login and register modes for the e-mail form.
- */
-function rqToggleMode() {
-    rqMode = rqMode === 'login' ? 'register' : 'login';
-    const isRegister = rqMode === 'register';
-    $('#rqName').toggle(isRegister);
-    $('#rqPassword').toggle(isRegister);
-    $('#rqSubmit').text(isRegister ? '注册' : '登录');
-    $('#rqToggleMode').text(isRegister ? '已有账号？登录' : '没有账号？注册');
-    displayError('');
 }
 
 /**
@@ -288,9 +268,8 @@ function rqInitAuthControls() {
     $('#rqShowEmail').on('click', () => {
         $('#rqEmailForm').toggle();
     });
-    $('#rqSendCode').on('click', () => rqSendCode(rqMode));
+    $('#rqSendCode').on('click', () => rqSendCode());
     $('#rqSubmit').on('click', () => rqSubmitEmailAuth());
-    $('#rqToggleMode').on('click', () => rqToggleMode());
     rqLoadProviders();
 }
 

@@ -195,21 +195,15 @@ export const router = express.Router();
 router.post('/send-code', async (request, response) => {
     try {
         const email = normalizeEmail(request.body.email || '');
-        const purpose = request.body.purpose === 'login' ? 'login' : 'register';
 
         if (!isValidEmail(email)) {
             return response.status(400).json({ error: 'Invalid e-mail address' });
         }
 
+        // Unified flow: a code can always be sent to any valid e-mail.
+        // Whether it logs in or creates an account is decided at verification time.
         const existing = await findUserByEmail(email);
-
-        if (purpose === 'register' && existing && existing.emailVerified) {
-            return response.status(409).json({ error: 'This e-mail is already registered' });
-        }
-        if (purpose === 'login' && !existing) {
-            return response.status(404).json({ error: 'No account found for this e-mail' });
-        }
-        if (purpose === 'login' && existing && !existing.enabled) {
+        if (existing && !existing.enabled) {
             return response.status(403).json({ error: 'Account is disabled' });
         }
 
@@ -227,12 +221,12 @@ router.post('/send-code', async (request, response) => {
     }
 });
 
-router.post('/register', async (request, response) => {
+// Unified passwordless auth: verify the code, then log in if the account exists,
+// or create it on the fly. No separate registration step, no password.
+router.post('/auth-email', async (request, response) => {
     try {
         const email = normalizeEmail(request.body.email || '');
         const code = String(request.body.code || '');
-        const name = String(request.body.name || '').trim();
-        const password = String(request.body.password || '');
 
         if (!isValidEmail(email)) {
             return response.status(400).json({ error: 'Invalid e-mail address' });
@@ -243,61 +237,24 @@ router.post('/register', async (request, response) => {
             return response.status(400).json({ error: verification.error });
         }
 
-        const existing = await findUserByEmail(email);
-        if (existing && existing.emailVerified) {
-            return response.status(409).json({ error: 'This e-mail is already registered' });
-        }
-
-        let user = existing;
+        let user = await findUserByEmail(email);
         if (user) {
-            // Unverified placeholder — promote it.
-            user.emailVerified = true;
-            user.enabled = true;
-            if (name) user.name = name;
-            if (password) {
-                user.salt = getPasswordSalt();
-                user.password = getPasswordHash(password, user.salt);
+            if (!user.enabled) {
+                return response.status(403).json({ error: 'Account is disabled' });
             }
-            await storage.setItem(toKey(user.handle), user);
+            if (!user.emailVerified) {
+                user.emailVerified = true;
+                await storage.setItem(toKey(user.handle), user);
+            }
         } else {
-            user = await createUserAccount({ email, name, password, emailVerified: true });
+            user = await createUserAccount({ email, emailVerified: true });
         }
 
         loginSession(request, user);
         return response.json({ handle: user.handle });
     } catch (error) {
-        console.error('RedQueen register failed:', error);
-        return response.status(500).json({ error: 'Registration failed' });
-    }
-});
-
-router.post('/login-email', async (request, response) => {
-    try {
-        const email = normalizeEmail(request.body.email || '');
-        const code = String(request.body.code || '');
-
-        if (!isValidEmail(email)) {
-            return response.status(400).json({ error: 'Invalid e-mail address' });
-        }
-
-        const verification = verifyCode(email, code);
-        if (!verification.ok) {
-            return response.status(400).json({ error: verification.error });
-        }
-
-        const user = await findUserByEmail(email);
-        if (!user) {
-            return response.status(404).json({ error: 'No account found for this e-mail' });
-        }
-        if (!user.enabled) {
-            return response.status(403).json({ error: 'Account is disabled' });
-        }
-
-        loginSession(request, user);
-        return response.json({ handle: user.handle });
-    } catch (error) {
-        console.error('RedQueen login-email failed:', error);
-        return response.status(500).json({ error: 'Login failed' });
+        console.error('RedQueen auth-email failed:', error);
+        return response.status(500).json({ error: 'Authentication failed' });
     }
 });
 
